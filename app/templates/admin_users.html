@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All Users Report</title>
+</head>
+<body>
+    <h1>All Registered Users</h1>
+    <a href="/admin/users.csv">Download CSV</a>
+    <table border="1">
+        <tr>
+            <th>ID</th><th>First Name</th><th>Last Name</th><th>AD Account ID</th><th>Approved</th>
+        </tr>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.id }}</td>
+            <td>{{ user.first_name }}</td>
+            <td>{{ user.last_name }}</td>
+            <td>{{ user.ad_account_id }}</td>
+            <td>{{ user.is_approved }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="/admin/approvals">Back to Admin</a>
+</body>
+</html>

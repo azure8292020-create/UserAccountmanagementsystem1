@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Unlock User Account</title>
+</head>
+<body>
+    <h1>Unlock User Account</h1>
+    <form method="post">
+        <label>RSA Token ID: <input type="text" name="rsa_token_id" required></label><br>
+        <label>Home Location: <input type="text" name="home_location" required></label><br>
+        <label>Account ID: <input type="text" name="ad_account_id" required></label><br>
+        <label>Question 1: <input type="text" name="question_1" required></label><br>
+        <label>Answer 1: <input type="text" name="answer_1" required></label><br>
+        <label>Question 2: <input type="text" name="question_2" required></label><br>
+        <label>Answer 2: <input type="text" name="answer_2" required></label><br>
+        <label>Question 3: <input type="text" name="question_3" required></label><br>
+        <label>Answer 3: <input type="text" name="answer_3" required></label><br>
+        <button type="submit">Unlock</button>
+    </form>
+    {% if msg %}<p>{{ msg }}</p>{% endif %}
+    <a href="/">Back to Home</a>
+</body>
+</html>

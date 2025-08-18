@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Approvals</title>
+</head>
+<body>
+    <h1>Pending User Approvals</h1>
+    <h2>Generate Registration Code</h2>
+    <form method="post" action="/admin/generate-code">
+        <label>AD Account ID (optional, tie code to AD account): <input type="text" name="ad_account_id"></label>
+        <button type="submit">Generate Code</button>
+    </form>
+    {% if msg %}<p><b>{{ msg }}</b></p>{% endif %}
+    <table border="1">
+        <tr>
+            <th>ID</th><th>First Name</th><th>Last Name</th><th>AD Account ID</th><th>Approve</th>
+        </tr>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.id }}</td>
+            <td>{{ user.first_name }}</td>
+            <td>{{ user.last_name }}</td>
+            <td>{{ user.ad_account_id }}</td>
+            <td>
+                <form method="post" action="/admin/approve/{{ user.id }}">
+                    <button type="submit">Approve</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="/">Back to Home</a>
+</body>
+</html>

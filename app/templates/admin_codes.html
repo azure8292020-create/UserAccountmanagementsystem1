@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All Registration Codes Report</title>
+</head>
+<body>
+    <h1>All Registration Codes</h1>
+    <a href="/admin/codes.csv">Download CSV</a>
+    <table border="1">
+        <tr>
+            <th>ID</th><th>Code</th><th>AD Account ID</th><th>Used</th><th>Used By</th><th>Created At</th><th>Used At</th>
+        </tr>
+        {% for code in codes %}
+        <tr>
+            <td>{{ code.id }}</td>
+            <td>{{ code.code }}</td>
+            <td>{{ code.ad_account_id }}</td>
+            <td>{{ code.used }}</td>
+            <td>{{ code.used_by }}</td>
+            <td>{{ code.created_at }}</td>
+            <td>{{ code.used_at }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="/admin/approvals">Back to Admin</a>
+</body>
+</html>

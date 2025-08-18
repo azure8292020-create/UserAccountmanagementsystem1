@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register User</title>
+</head>
+<body>
+    <h1>Register User</h1>
+    <form method="post">
+        <label>Registration Code: <input type="text" name="code" value="{{ code }}" required></label><br>
+        <label>First Name: <input type="text" name="first_name" required></label><br>
+        <label>Last Name: <input type="text" name="last_name" required></label><br>
+        <label>Middle Name: <input type="text" name="middle_name"></label><br>
+        <label>Do you have an Active Directory Account? <input type="checkbox" name="has_ad"></label><br>
+        <label>Account ID (if AD): <input type="text" name="ad_account_id"></label><br>
+        <label>RSA Token ID: <input type="text" name="rsa_token_id" required></label><br>
+        <label>Home Location: <input type="text" name="home_location" required></label><br>
+        <label>Question 1: <input type="text" name="question_1" required></label><br>
+        <label>Answer 1: <input type="text" name="answer_1" required></label><br>
+        <label>Question 2: <input type="text" name="question_2" required></label><br>
+        <label>Answer 2: <input type="text" name="answer_2" required></label><br>
+        <label>Question 3: <input type="text" name="question_3" required></label><br>
+        <label>Answer 3: <input type="text" name="answer_3" required></label><br>
+    <button type="submit">Register</button>
+    </form>
+    {% if msg %}<p>{{ msg }}</p>{% endif %}
+    <a href="/">Back to Home</a>
+</body>
+</html>

@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "user-account-management.fullname" . }}
+  labels:
+    app: {{ include "user-account-management.name" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "user-account-management.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "user-account-management.name" . }}
+    spec:
+      containers:
+        - name: user-account-management
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 80
+          env:
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "user-account-management.fullname" . }}-db
+                  key: db_url
+            - name: AD_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "user-account-management.fullname" . }}-ad
+                  key: username
+            - name: AD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "user-account-management.fullname" . }}-ad
+                  key: password
+            - name: AD_OU
+              value: {{ .Values.ad.ou | quote }}
+            - name: AD_SERVERS
+              value: {{ .Values.ad.servers | join "," | quote }}
+            - name: AD_CERTS
+              value: {{ .Values.ad.certs | join "," | quote }}
+          volumeMounts:
+            - name: ad-certs
+              mountPath: /certs
+              readOnly: true
+      volumes:
+        - name: ad-certs
+          secret:
+            secretName: {{ include "user-account-management.fullname" . }}-ad-certs

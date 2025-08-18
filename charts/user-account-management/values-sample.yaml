@@ -1,0 +1,45 @@
+replicaCount: 1
+
+image:
+  repository: your-docker-repo/user-account-management
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+postgresql:
+  enabled: true
+  auth:
+    username: user
+    password: password
+    database: userdb
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+
+ad:
+  servers:
+    - ad1.example.com
+    - ad2.example.com
+  certs:
+    - /certs/ad1.crt
+    - /certs/ad2.crt
+  username: "ad_bind_user"
+  password: "ad_bind_password"
+  ou: "OU=Users,DC=example,DC=com"
+
+admin:
+  username: "admin"
+  password: "adminpass"
+  email: "admin@example.com"
+
+istio:
+  enabled: true
+  gateway:
+    name: istio-gateway
+    namespace: istio-system
+  hosts:
+    - "user-management.example.com"
