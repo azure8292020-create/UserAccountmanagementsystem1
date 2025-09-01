@@ -1,9 +1,6 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Register User</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Register User{% endblock %}
+{% block content %}
     <h1>Register User</h1>
     <form method="post">
         <label>Registration Code: <input type="text" name="code" value="{{ code }}" required></label><br>
@@ -20,9 +17,8 @@
         <label>Answer 2: <input type="text" name="answer_2" required></label><br>
         <label>Question 3: <input type="text" name="question_3" required></label><br>
         <label>Answer 3: <input type="text" name="answer_3" required></label><br>
-    <button type="submit">Register</button>
+        <button type="submit">Register</button>
     </form>
     {% if msg %}<p>{{ msg }}</p>{% endif %}
     <a href="/">Back to Home</a>
-</body>
-</html>
+{% endblock %}

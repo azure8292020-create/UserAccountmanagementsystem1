@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}User Management System{% endblock %}</title>
+    <style>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: url("/static/bg.jpeg") no-repeat center center fixed;
+            background-size: cover;
+            color: #222;
+        }
+        .container {
+            background: rgba(255,255,255,0.85);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            margin: 3rem auto;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+        a { color: #4f8cff; }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

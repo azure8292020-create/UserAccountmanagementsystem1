@@ -1,32 +1,60 @@
-# Audit logging function
-def audit_log(event: str):
-    with open("audit.log", "a") as f:
-        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {event}\n")
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from sqlalchemy.orm import Session
+# --- FastAPI app and templates initialization ---
+from fastapi import FastAPI, Request, Form, Depends
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.templating import Jinja2Templates
+import csv
+import io
+import threading
+import time
 import secrets as pysecrets
 import hashlib
 import logging
-security = HTTPBasic()
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from .config import settings
+from .db import get_db
+from .models import Base, User, RegistrationCode
+
+app = FastAPI()
+templates = Jinja2Templates(directory="app/templates")
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+security = HTTPBasic()
+
+# Try database initialization, but don't crash if DB is unavailable
+try:
+    from sqlalchemy import create_engine
+    engine = create_engine(settings.db_url)
+    from .models import Base
+    try:
+        Base.metadata.create_all(bind=engine)
+        logging.info("Database tables checked/created successfully.")
+    except Exception as dbinit:
+        logging.warning(f"Database table creation failed: {dbinit}. App will still start.")
+except Exception as e:
+    logging.warning(f"Database unavailable at startup: {e}. App will still start.")
+
+# --- Utility functions ---
+def audit_log(event: str):
+    with open("audit.log", "a") as f:
+        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {event}\n")
 
 def hash_answer(answer: str) -> str:
     return hashlib.sha256(answer.encode()).hexdigest()
 
 def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
-    from .config import settings
     correct_username = pysecrets.compare_digest(credentials.username, getattr(settings, "admin_username", "admin"))
     correct_password = pysecrets.compare_digest(credentials.password, getattr(settings, "admin_password", "adminpass"))
     if not (correct_username and correct_password):
         raise Exception("Invalid admin credentials")
     return True
+
 from fastapi import status
-from fastapi.responses import RedirectResponse
 from .ad_utils import get_ad_connection
 def check_user_in_ad(ad_account_id: str) -> bool:
     # Try both AD servers
-    from .config import settings
     for server, cert in zip(settings.ad_servers, settings.ad_certs):
         try:
             conn = get_ad_connection(server, cert, settings.ad_username, settings.ad_password)
@@ -38,19 +66,6 @@ def check_user_in_ad(ad_account_id: str) -> bool:
         except Exception:
             continue
     return False
-
-
-from fastapi import FastAPI, Request, Form, Depends
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from .config import settings
-from .db import get_db
-from .models import Base, User, RegistrationCode
-from fastapi.responses import StreamingResponse
-import csv
-import io
-import threading
-import time
 # Admin reporting: view all users
 @app.get("/admin/users", response_class=HTMLResponse)
 def admin_users(request: Request, db: Session = Depends(get_db), auth: bool = Depends(verify_admin)):
@@ -92,30 +107,52 @@ def admin_codes_csv(db: Session = Depends(get_db), auth: bool = Depends(verify_a
 def expire_codes_and_notify():
     while True:
         # Example: expire codes older than 30 days
-        from .db import SessionLocal
-        db = SessionLocal()
-        from datetime import datetime, timedelta
-        expiry = datetime.utcnow() - timedelta(days=30)
-        expired = db.query(RegistrationCode).filter(RegistrationCode.used == False, RegistrationCode.created_at < expiry).all()
-        for code in expired:
-            code.used = True
-            db.commit()
-            audit_log(f"Code expired: {code.code}")
-        db.close()
+        try:
+            from .db import SessionLocal
+            db = SessionLocal()
+            from datetime import datetime, timedelta
+            expiry = datetime.utcnow() - timedelta(days=30)
+            expired = db.query(RegistrationCode).filter(RegistrationCode.used == False, RegistrationCode.created_at < expiry).all()
+            for code in expired:
+                code.used = True
+                db.commit()
+                audit_log(f"Code expired: {code.code}")
+            db.close()
+        except Exception as e:
+            logging.warning(f"Background job: Could not connect to DB: {e}")
         time.sleep(86400)  # Run daily
 
 # Start automation in background thread
-threading.Thread(target=expire_codes_and_notify, daemon=True).start()
+def can_connect_db():
+    try:
+        from .db import SessionLocal
+        db = SessionLocal()
+        db.execute('SELECT 1')
+        db.close()
+        return True
+    except Exception:
+        return False
+
+if can_connect_db():
+    threading.Thread(target=expire_codes_and_notify, daemon=True).start()
+else:
+    logging.warning("Background job not started: DB unavailable at startup.")
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
+
 
 
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
 
-# Database initialization
-engine = create_engine(settings.db_url)
-Base.metadata.create_all(bind=engine)
+# Database initialization (never crash if DB is down)
+try:
+    engine = create_engine(settings.db_url)
+    Base.metadata.create_all(bind=engine)
+    logging.info("Database tables checked/created successfully.")
+except Exception as e:
+    engine = None
+    logging.warning(f"Database unavailable at startup: {e}. App will still start.")
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
@@ -162,53 +199,57 @@ async def register_post(
 ):
 
     # Validate registration code
-    reg_code = db.query(RegistrationCode).filter(RegistrationCode.code == code, RegistrationCode.used == False).first()
-    if not reg_code:
-        return templates.TemplateResponse("register.html", {"request": request, "msg": "Invalid or used registration code.", "code": code})
-    # If code is tied to an AD account, enforce match
-    if reg_code.ad_account_id and ad_account_id:
-        if reg_code.ad_account_id.lower() != ad_account_id.lower():
+    try:
+        reg_code = db.query(RegistrationCode).filter(RegistrationCode.code == code, RegistrationCode.used == False).first()
+        if not reg_code:
+            return templates.TemplateResponse("register.html", {"request": request, "msg": "Invalid or used registration code.", "code": code})
+        # If code is tied to an AD account, enforce match
+        if reg_code.ad_account_id and ad_account_id:
+            if reg_code.ad_account_id.lower() != ad_account_id.lower():
+                return templates.TemplateResponse("register.html", {"request": request, "msg": "This code is only valid for AD account: %s" % reg_code.ad_account_id, "code": code})
+        elif reg_code.ad_account_id and not ad_account_id:
             return templates.TemplateResponse("register.html", {"request": request, "msg": "This code is only valid for AD account: %s" % reg_code.ad_account_id, "code": code})
-    elif reg_code.ad_account_id and not ad_account_id:
-        return templates.TemplateResponse("register.html", {"request": request, "msg": "This code is only valid for AD account: %s" % reg_code.ad_account_id, "code": code})
 
-    # Check if user already exists by AD account ID (if provided)
-    if ad_account_id:
-        existing = db.query(User).filter(User.ad_account_id == ad_account_id).first()
-        if existing:
-            return templates.TemplateResponse("register.html", {"request": request, "msg": "User already registered.", "code": code})
-        # Check in Active Directory
-        if not check_user_in_ad(ad_account_id):
-            return templates.TemplateResponse("register.html", {"request": request, "msg": "User not found in Active Directory.", "code": code})
+        # Check if user already exists by AD account ID (if provided)
+        if ad_account_id:
+            existing = db.query(User).filter(User.ad_account_id == ad_account_id).first()
+            if existing:
+                return templates.TemplateResponse("register.html", {"request": request, "msg": "User already registered.", "code": code})
+            # Check in Active Directory
+            if not check_user_in_ad(ad_account_id):
+                return templates.TemplateResponse("register.html", {"request": request, "msg": "User not found in Active Directory.", "code": code})
 
-    # Create new user
-    user = User(
-        first_name=first_name,
-        last_name=last_name,
-        middle_name=middle_name,
-        ad_account_id=ad_account_id,
-        rsa_token_id=rsa_token_id,
-        home_location=home_location,
-        question_1=question_1,
-        answer_1=hash_answer(answer_1),
-        question_2=question_2,
-        answer_2=hash_answer(answer_2),
-        question_3=question_3,
-        answer_3=hash_answer(answer_3),
-        is_approved=False
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+        # Create new user
+        user = User(
+            first_name=first_name,
+            last_name=last_name,
+            middle_name=middle_name,
+            ad_account_id=ad_account_id,
+            rsa_token_id=rsa_token_id,
+            home_location=home_location,
+            question_1=question_1,
+            answer_1=hash_answer(answer_1),
+            question_2=question_2,
+            answer_2=hash_answer(answer_2),
+            question_3=question_3,
+            answer_3=hash_answer(answer_3),
+            is_approved=False
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
 
-    # Mark code as used
-    reg_code.used = True
-    reg_code.used_by = user.id
-    from datetime import datetime
-    reg_code.used_at = datetime.utcnow()
-    db.commit()
+        # Mark code as used
+        reg_code.used = True
+        reg_code.used_by = user.id
+        from datetime import datetime
+        reg_code.used_at = datetime.utcnow()
+        db.commit()
 
-    return templates.TemplateResponse("register.html", {"request": request, "msg": "Registration successful! Awaiting approval.", "code": code})
+        return templates.TemplateResponse("register.html", {"request": request, "msg": "Registration successful! Awaiting approval.", "code": code})
+    except Exception as e:
+        logging.warning(f"Register endpoint: Could not connect to DB: {e}")
+        return templates.TemplateResponse("register.html", {"request": request, "msg": "Database unavailable. Please try again later.", "code": code})
 # Admin endpoint to generate registration codes
 @app.post("/admin/generate-code", response_class=HTMLResponse)
 def generate_code(request: Request, ad_account_id: str = Form(None), db: Session = Depends(get_db), auth: bool = Depends(verify_admin)):
@@ -242,29 +283,33 @@ async def unlock_post(
     db: Session = Depends(get_db)
 ):
 
-    user = db.query(User).filter(
-        User.ad_account_id == ad_account_id,
-        User.rsa_token_id == rsa_token_id,
-        User.home_location == home_location,
-        User.question_1 == question_1, User.answer_1 == hash_answer(answer_1),
-        User.question_2 == question_2, User.answer_2 == hash_answer(answer_2),
-        User.question_3 == question_3, User.answer_3 == hash_answer(answer_3)
-    ).first()
-    if user:
-        # Check in Active Directory before unlock
-        if not check_user_in_ad(ad_account_id):
-            return templates.TemplateResponse("unlock.html", {"request": request, "msg": "User not found in Active Directory."})
-        # Try to unlock in AD (expand as needed)
-        try:
-            from .ad_utils import unlock_ad_account
-            unlock_ad_account(ad_account_id)
-            logging.info(f"Unlocked AD account: {ad_account_id}")
-            return templates.TemplateResponse("unlock.html", {"request": request, "msg": "Account unlocked successfully."})
-        except Exception as e:
-            logging.error(f"Failed to unlock AD account: {ad_account_id} - {e}")
-            return templates.TemplateResponse("unlock.html", {"request": request, "msg": "Failed to unlock account in AD."})
-    else:
-        return templates.TemplateResponse("unlock.html", {"request": request, "msg": "User not found or answers incorrect. Please contact DevOps team."})
+    try:
+        user = db.query(User).filter(
+            User.ad_account_id == ad_account_id,
+            User.rsa_token_id == rsa_token_id,
+            User.home_location == home_location,
+            User.question_1 == question_1, User.answer_1 == hash_answer(answer_1),
+            User.question_2 == question_2, User.answer_2 == hash_answer(answer_2),
+            User.question_3 == question_3, User.answer_3 == hash_answer(answer_3)
+        ).first()
+        if user:
+            # Check in Active Directory before unlock
+            if not check_user_in_ad(ad_account_id):
+                return templates.TemplateResponse("unlock.html", {"request": request, "msg": "User not found in Active Directory."})
+            # Try to unlock in AD (expand as needed)
+            try:
+                from .ad_utils import unlock_ad_account
+                unlock_ad_account(ad_account_id)
+                logging.info(f"Unlocked AD account: {ad_account_id}")
+                return templates.TemplateResponse("unlock.html", {"request": request, "msg": "Account unlocked successfully."})
+            except Exception as e:
+                logging.error(f"Failed to unlock AD account: {ad_account_id} - {e}")
+                return templates.TemplateResponse("unlock.html", {"request": request, "msg": "Failed to unlock account in AD."})
+        else:
+            return templates.TemplateResponse("unlock.html", {"request": request, "msg": "User not found or answers incorrect. Please contact DevOps team."})
+    except Exception as e:
+        logging.warning(f"Unlock endpoint: Could not connect to DB: {e}")
+        return templates.TemplateResponse("unlock.html", {"request": request, "msg": "Database unavailable. Please try again later."})
 # Admin approval endpoints
 
 @app.get("/admin/approvals", response_class=HTMLResponse)
@@ -303,18 +348,22 @@ async def status_post(
     answer_3: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    user = db.query(User).filter(
-        User.ad_account_id == ad_account_id,
-        User.rsa_token_id == rsa_token_id,
-        User.home_location == home_location,
-        User.question_1 == question_1, User.answer_1 == answer_1,
-        User.question_2 == question_2, User.answer_2 == answer_2,
-        User.question_3 == question_3, User.answer_3 == answer_3
-    ).first()
-    if user:
-        return templates.TemplateResponse("status.html", {"request": request, "msg": "Account exists in the system."})
-    else:
-        return templates.TemplateResponse("status.html", {"request": request, "msg": "Account not found. Please check with the security team."})
+    try:
+        user = db.query(User).filter(
+            User.ad_account_id == ad_account_id,
+            User.rsa_token_id == rsa_token_id,
+            User.home_location == home_location,
+            User.question_1 == question_1, User.answer_1 == answer_1,
+            User.question_2 == question_2, User.answer_2 == answer_2,
+            User.question_3 == question_3, User.answer_3 == answer_3
+        ).first()
+        if user:
+            return templates.TemplateResponse("status.html", {"request": request, "msg": "Account exists in the system."})
+        else:
+            return templates.TemplateResponse("status.html", {"request": request, "msg": "Account not found. Please check with the security team."})
+    except Exception as e:
+        logging.warning(f"Status endpoint: Could not connect to DB: {e}")
+        return templates.TemplateResponse("status.html", {"request": request, "msg": "Database unavailable. Please try again later."})
 
 
 

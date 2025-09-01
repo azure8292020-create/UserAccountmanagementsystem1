@@ -1,9 +1,6 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Admin Approvals</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Admin Approvals{% endblock %}
+{% block content %}
     <h1>Pending User Approvals</h1>
     <h2>Generate Registration Code</h2>
     <form method="post" action="/admin/generate-code">
@@ -30,5 +27,4 @@
         {% endfor %}
     </table>
     <a href="/">Back to Home</a>
-</body>
-</html>
+{% endblock %}

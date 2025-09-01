@@ -1,9 +1,6 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>All Registration Codes Report</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}All Registration Codes Report{% endblock %}
+{% block content %}
     <h1>All Registration Codes</h1>
     <a href="/admin/codes.csv">Download CSV</a>
     <table border="1">
@@ -23,5 +20,4 @@
         {% endfor %}
     </table>
     <a href="/admin/approvals">Back to Admin</a>
-</body>
-</html>
+{% endblock %}

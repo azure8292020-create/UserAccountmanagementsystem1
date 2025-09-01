@@ -1,9 +1,6 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Account Status</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Account Status{% endblock %}
+{% block content %}
     <h1>Account Status</h1>
     <form method="post">
         <label>Account ID: <input type="text" name="ad_account_id" required></label><br>
@@ -19,5 +16,4 @@
     </form>
     {% if msg %}<p>{{ msg }}</p>{% endif %}
     <a href="/">Back to Home</a>
-</body>
-</html>
+{% endblock %}
