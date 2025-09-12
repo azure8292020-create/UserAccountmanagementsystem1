@@ -1,3 +1,23 @@
+# AD health check endpoint
+@app.get("/ad-health", response_class=HTMLResponse)
+def ad_health(request: Request):
+    try:
+        # Try connecting to the first AD server
+        from .ad_utils import get_ad_connection
+        server = settings.ad_servers[0]
+        cert = settings.ad_certs[0]
+        conn = get_ad_connection(server, cert, settings.ad_username, settings.ad_password)
+        # Try a simple search
+        search_base = settings.ad_ou
+        search_filter = "(objectClass=user)"
+        conn.search(search_base, search_filter, attributes=['sAMAccountName'], size_limit=1)
+        if conn.entries:
+            status = "Success: Connected to Active Directory and found user entries."
+        else:
+            status = "Connected to AD, but no user entries found."
+    except Exception as e:
+        status = f"Failed to connect to Active Directory: {e}"
+    return templates.TemplateResponse("ad_health.html", {"request": request, "status": status})
 from sqlalchemy.orm import Session
 # --- FastAPI app and templates initialization ---
 from fastapi import FastAPI, Request, Form, Depends
@@ -165,15 +185,31 @@ def password_help(request: Request):
 # Placeholder endpoints for registration, unlock, status, create user
 
 
+from .questions import SECURITY_QUESTIONS
+
 @app.get("/register", response_class=HTMLResponse)
 def register_get(request: Request, code: str = None, db: Session = Depends(get_db)):
     # Require a valid, unused registration code
     if not code:
-        return templates.TemplateResponse("register.html", {"request": request, "msg": "Registration code required.", "code": ""})
+        return templates.TemplateResponse("register.html", {
+            "request": request,
+            "msg": "Registration code required.",
+            "code": "",
+            "security_questions": SECURITY_QUESTIONS
+        })
     reg_code = db.query(RegistrationCode).filter(RegistrationCode.code == code, RegistrationCode.used == False).first()
     if not reg_code:
-        return templates.TemplateResponse("register.html", {"request": request, "msg": "Invalid or used registration code.", "code": code})
-    return templates.TemplateResponse("register.html", {"request": request, "code": code})
+        return templates.TemplateResponse("register.html", {
+            "request": request,
+            "msg": "Invalid or used registration code.",
+            "code": code,
+            "security_questions": SECURITY_QUESTIONS
+        })
+    return templates.TemplateResponse("register.html", {
+        "request": request,
+        "code": code,
+        "security_questions": SECURITY_QUESTIONS
+    })
 
 
 

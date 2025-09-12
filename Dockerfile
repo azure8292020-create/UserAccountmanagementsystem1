@@ -1,12 +1,13 @@
 # syntax=docker/dockerfile:1
-FROM python:3.11-slim-bullseye AS base
+FROM python:3.11.9-slim-bullseye AS base
 
 WORKDIR /app
 
 # Install system dependencies and update packages to latest versions
 RUN apt-get update && \
 	apt-get upgrade -y && \
-	apt-get install -y gcc libpq-dev && \
+	apt-get install --no-install-recommends -y gcc libpq-dev && \
+	apt-get clean && \
 	rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

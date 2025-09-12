@@ -11,7 +11,22 @@ def get_ad_connection(server_url, cert_path, username, password):
 # Add more AD utility functions as needed
 
 def unlock_ad_account(ad_account_id: str):
-    # This is a stub. In a real system, implement AD unlock logic here.
-    # For example, use conn.extend.microsoft.unlock_account(user_dn)
-    # You may need to search for the DN first.
-    pass
+    """
+    Unlocks an Active Directory account given the sAMAccountName (ad_account_id).
+    """
+    conn = get_ad_connection(
+        settings.AD_SERVER_URL,
+        settings.AD_CERT_PATH,
+        settings.AD_USERNAME,
+        settings.AD_PASSWORD
+    )
+    # Search for the user DN
+    search_base = settings.AD_SEARCH_BASE
+    search_filter = f"(sAMAccountName={ad_account_id})"
+    conn.search(search_base, search_filter, attributes=["distinguishedName"])
+    if not conn.entries:
+        raise ValueError(f"Account '{ad_account_id}' not found in AD.")
+    user_dn = conn.entries[0].distinguishedName.value
+    # Unlock the account using Microsoft extension
+    conn.extend.microsoft.unlock_account(user_dn)
+    conn.unbind()

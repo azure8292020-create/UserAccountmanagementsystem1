@@ -2,17 +2,51 @@
 {% block title %}Unlock User Account{% endblock %}
 {% block content %}
     <h1>Unlock User Account</h1>
-    <form method="post">
-        <label>RSA Token ID: <input type="text" name="rsa_token_id" required></label><br>
-        <label>Home Location: <input type="text" name="home_location" required></label><br>
-        <label>Account ID: <input type="text" name="ad_account_id" required></label><br>
-        <label>Question 1: <input type="text" name="question_1" required></label><br>
-        <label>Answer 1: <input type="text" name="answer_1" required></label><br>
-        <label>Question 2: <input type="text" name="question_2" required></label><br>
-        <label>Answer 2: <input type="text" name="answer_2" required></label><br>
-        <label>Question 3: <input type="text" name="question_3" required></label><br>
-        <label>Answer 3: <input type="text" name="answer_3" required></label><br>
-        <button type="submit">Unlock</button>
+    <form method="post" onsubmit="return validateQuestions()">
+        <div class="form-group">
+            <label>RSA Token ID: <input type="text" name="rsa_token_id" required></label>
+        </div>
+        <div class="form-group">
+            <label>Home Location: <input type="text" name="home_location" required></label>
+        </div>
+        <div class="form-group">
+            <label>Account ID: <input type="text" name="ad_account_id" required></label>
+        </div>
+        
+        <div class="form-group">
+            <label>Security Question 1:</label>
+            <select name="question_1" required>
+                <option value="">Select a question...</option>
+                {% for question in security_questions %}
+                <option value="{{ question }}">{{ question }}</option>
+                {% endfor %}
+            </select>
+            <label>Answer 1: <input type="text" name="answer_1" required></label>
+        </div>
+        
+        <div class="form-group">
+            <label>Security Question 2:</label>
+            <select name="question_2" required>
+                <option value="">Select a question...</option>
+                {% for question in security_questions %}
+                <option value="{{ question }}">{{ question }}</option>
+                {% endfor %}
+            </select>
+            <label>Answer 2: <input type="text" name="answer_2" required></label>
+        </div>
+        
+        <div class="form-group">
+            <label>Security Question 3:</label>
+            <select name="question_3" required>
+                <option value="">Select a question...</option>
+                {% for question in security_questions %}
+                <option value="{{ question }}">{{ question }}</option>
+                {% endfor %}
+            </select>
+            <label>Answer 3: <input type="text" name="answer_3" required></label>
+        </div>
+        
+        <button type="submit">Unlock Account</button>
     </form>
     {% if msg %}<p>{{ msg }}</p>{% endif %}
     <a href="/">Back to Home</a>

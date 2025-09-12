@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}AD Health Check{% endblock %}
+{% block content %}
+<main class="health-check">
+    <h1>Active Directory Health Check</h1>
+    <div class="status-message {% if 'Failed' in status %}error{% else %}success{% endif %}">
+        {% if status %}
+            <p>{{ status }}</p>
+        {% else %}
+            <p>No status information available</p>
+        {% endif %}
+    </div>
+    <nav class="navigation">
+        <a href="/" class="btn btn-primary">Back to Home</a>
+    </nav>
+</main>
+{% endblock %}

@@ -20,7 +20,77 @@
             box-shadow: 0 4px 24px rgba(0,0,0,0.08);
         }
         a { color: #4f8cff; }
+        
+        /* Form styling */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+        select {
+            background-color: white;
+            cursor: pointer;
+        }
+        select:required:invalid {
+            color: #666;
+        }
+        button {
+            background-color: #4f8cff;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        button:hover {
+            background-color: #3a7aff;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #ffe6e6;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        .success {
+            color: #28a745;
+            background-color: #e6ffe6;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
     </style>
+    <script>
+        // Prevent selecting the same security question multiple times
+        function validateQuestions() {
+            const selects = [
+                document.getElementsByName('question_1')[0],
+                document.getElementsByName('question_2')[0],
+                document.getElementsByName('question_3')[0]
+            ];
+            
+            const values = selects.map(s => s.value);
+            const duplicates = values.some((v, i) => v && values.indexOf(v) !== i);
+            
+            if (duplicates) {
+                alert('Please select different security questions');
+                return false;
+            }
+            return true;
+        }
+    </script>
     {% block head %}{% endblock %}
 </head>
 <body>
