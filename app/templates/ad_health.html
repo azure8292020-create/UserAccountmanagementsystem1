@@ -2,16 +2,221 @@
 {% block title %}AD Health Check{% endblock %}
 {% block content %}
 <main class="health-check">
-    <h1>Active Directory Health Check</h1>
-    <div class="status-message {% if 'Failed' in status %}error{% else %}success{% endif %}">
-        {% if status %}
-            <p>{{ status }}</p>
-        {% else %}
-            <p>No status information available</p>
-        {% endif %}
+    <h1>Active Directory Health Status</h1>
+    
+    <div class="overall-status {% if overall_healthy %}status-healthy{% else %}status-unhealthy{% endif %}">
+        <h2>Overall System Status: 
+            <span class="status-badge">
+                {{ "Healthy" if overall_healthy else "Degraded" }}
+            </span>
+        </h2>
+        <p class="status-description">
+            {% if overall_healthy %}
+                All systems operational
+            {% else %}
+                Service available with reduced redundancy
+            {% endif %}
+        </p>
     </div>
-    <nav class="navigation">
+
+    <div class="server-grid">
+        {% for server in servers %}
+        <div class="server-card {% if server.healthy %}healthy{% else %}unhealthy{% endif %}">
+            <h3>Server {{ loop.index }}</h3>
+            <div class="server-details">
+                <p class="server-name">{{ server.hostname }}</p>
+                <p class="server-status">Status: 
+                    <span class="status-indicator">
+                        {{ "Online" if server.healthy else "Offline" }}
+                    </span>
+                </p>
+                <div class="server-metrics">
+                    <div class="metric">
+                        <span class="metric-label">Response Time:</span>
+                        <span class="metric-value">{{ server.response_time|default('N/A') }}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Last Successful Check:</span>
+                        <span class="metric-value">{{ server.last_success|default('Never') }}</span>
+                    </div>
+                    {% if server.error %}
+                    <div class="error-details">
+                        <span class="error-label">Error:</span>
+                        <span class="error-message">{{ server.error }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="health-actions">
+        <button onclick="refreshStatus()" class="btn btn-refresh">
+            <span class="icon">🔄</span> Refresh Status
+        </button>
         <a href="/" class="btn btn-primary">Back to Home</a>
-    </nav>
+    </div>
 </main>
+
+<style>
+    .health-check {
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .overall-status {
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .status-healthy {
+        background-color: #d4edda;
+        border: 1px solid #28a745;
+    }
+
+    .status-unhealthy {
+        background-color: #f8d7da;
+        border: 1px solid #dc3545;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+    }
+
+    .status-healthy .status-badge {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .status-unhealthy .status-badge {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .server-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin: 30px 0;
+    }
+
+    .server-card {
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .server-card.healthy {
+        border: 1px solid #28a745;
+        background-color: #f8fff9;
+    }
+
+    .server-card.unhealthy {
+        border: 1px solid #dc3545;
+        background-color: #fff8f8;
+    }
+
+    .server-details {
+        margin-top: 15px;
+    }
+
+    .server-name {
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .status-indicator {
+        font-weight: bold;
+    }
+
+    .healthy .status-indicator {
+        color: #28a745;
+    }
+
+    .unhealthy .status-indicator {
+        color: #dc3545;
+    }
+
+    .server-metrics {
+        margin-top: 15px;
+    }
+
+    .metric {
+        margin: 8px 0;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .error-details {
+        margin-top: 15px;
+        padding: 10px;
+        background-color: #fff0f0;
+        border-radius: 4px;
+    }
+
+    .error-label {
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    .health-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-refresh {
+        background-color: #17a2b8;
+        color: white;
+    }
+
+    .btn-refresh:hover {
+        background-color: #138496;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    @media (max-width: 768px) {
+        .server-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    function refreshStatus() {
+        window.location.reload();
+    }
+
+    // Auto-refresh every 30 seconds
+    setTimeout(() => {
+        window.location.reload();
+    }, 30000);
+</script>
 {% endblock %}

@@ -1,12 +1,159 @@
 {% extends "base.html" %}
 {% block title %}User Management System{% endblock %}
 {% block content %}
+<main class="container">
     <h1>Welcome to the User Management System</h1>
-    <ul>
-        <li><a href="/register">Register User</a></li>
-        <li><a href="/unlock">Unlock User Account</a></li>
-        <li><a href="/status">Account Status</a></li>
-        <li><a href="/password-help">Password Help</a></li>
-        <li><a href="/create-user">Create User Account (Manual Approval)</a></li>
-    </ul>
+    
+    <section class="endpoint-section">
+        <h2>User Self-Service</h2>
+        <div class="card-grid">
+            <div class="card">
+                <h3>Account Registration</h3>
+                <p>Register a new user account with security questions</p>
+                <a href="/register" class="btn">Register User</a>
+            </div>
+            <div class="card">
+                <h3>Account Management</h3>
+                <p>Unlock your account or check account status</p>
+                <div class="button-group">
+                    <a href="/unlock" class="btn">Unlock Account</a>
+                    <a href="/status" class="btn">Check Status</a>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Help & Support</h3>
+                <p>Get help with passwords and account issues</p>
+                <div class="button-group">
+                    <a href="/password-help" class="btn">Password Help</a>
+                    <a href="/create-user" class="btn">Manual Registration</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="endpoint-section">
+        <h2>Administrative Features</h2>
+        <div class="card-grid">
+            <div class="card">
+                <h3>User Management</h3>
+                <p>Manage user accounts and approvals</p>
+                <div class="button-group">
+                    <a href="/admin/users" class="btn btn-admin">View All Users</a>
+                    <a href="/admin/approvals" class="btn btn-admin">Pending Approvals</a>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Registration Codes</h3>
+                <p>Manage registration codes and invites</p>
+                <div class="button-group">
+                    <a href="/admin/codes" class="btn btn-admin">View Codes</a>
+                </div>
+            </div>
+            <div class="card">
+                <h3>System Health</h3>
+                <p>Monitor system and AD connectivity</p>
+                <div class="button-group">
+                    <a href="/ad-health" class="btn btn-admin">AD Health Check</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="endpoint-section">
+        <h2>Data Export</h2>
+        <div class="card-grid">
+            <div class="card">
+                <h3>Download Reports</h3>
+                <p>Export user and registration data</p>
+                <div class="button-group">
+                    <a href="/admin/users.csv" class="btn btn-export">Export Users</a>
+                    <a href="/admin/codes.csv" class="btn btn-export">Export Codes</a>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<style>
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.endpoint-section {
+    margin-bottom: 40px;
+}
+
+.endpoint-section h2 {
+    color: #333;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.card p {
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.3s;
+}
+
+.btn {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn:hover {
+    background-color: #2980b9;
+}
+
+.btn-admin {
+    background-color: #2ecc71;
+}
+
+.btn-admin:hover {
+    background-color: #27ae60;
+}
+
+.btn-export {
+    background-color: #e67e22;
+}
+
+.btn-export:hover {
+    background-color: #d35400;
+}
+</style>
 {% endblock %}
