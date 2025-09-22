@@ -6,12 +6,23 @@ from .config import settings
 def get_ad_connection(server_url: str, cert_path: str, username: str, password: str) -> Connection:
     """Create a connection to an AD server."""
     tls = Tls(
-        ca_certs_file=cert_path,
         validate=ssl.CERT_REQUIRED,
         version=ssl.PROTOCOL_TLS_CLIENT
     )
-    server = Server(server_url, use_ssl=True, get_info=ALL, tls=tls)
-    conn = Connection(server, user=username, password=password, auto_bind=True)
+    server = Server(
+        server_url, 
+        use_ssl=True, 
+        get_info=ALL, 
+        tls=tls,
+        connect_timeout=5
+    )
+    conn = Connection(
+        server, 
+        user=username, 
+        password=password, 
+        auto_bind=True,
+        authentication='SIMPLE'
+    )
     return conn
 
 def get_available_ad_connection() -> Tuple[Optional[Connection], Optional[str]]:
