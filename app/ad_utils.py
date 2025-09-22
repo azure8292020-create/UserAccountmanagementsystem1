@@ -7,9 +7,7 @@ def get_ad_connection(server_url: str, cert_path: str, username: str, password: 
     """Create a connection to an AD server."""
     tls = Tls(
         validate=ssl.CERT_NONE,  # Disable certificate validation temporarily
-        version=ssl.PROTOCOL_TLS_CLIENT,
-        ciphers='ALL',
-        validate_hostname=False
+        version=ssl.PROTOCOL_TLS_CLIENT
     )
     server = Server(
         server_url, 
