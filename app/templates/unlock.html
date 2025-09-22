@@ -2,52 +2,105 @@
 {% block title %}Unlock User Account{% endblock %}
 {% block content %}
     <h1>Unlock User Account</h1>
-    <form method="post" onsubmit="return validateQuestions()">
-        <div class="form-group">
-            <label>RSA Token ID: <input type="text" name="rsa_token_id" required></label>
-        </div>
-        <div class="form-group">
-            <label>Home Location: <input type="text" name="home_location" required></label>
-        </div>
-        <div class="form-group">
-            <label>Account ID: <input type="text" name="ad_account_id" required></label>
-        </div>
+    <div class="unlock-container">
+        <form method="post">
+            <div class="form-group">
+                <label for="ad_account_id">AD Account Username:</label>
+                <input type="text" id="ad_account_id" name="ad_account_id" required 
+                       pattern="^[A-Za-z0-9._-]+$" 
+                       title="Account ID can only contain letters, numbers, dots, underscores, and hyphens">
+            </div>
+            
+            <div class="form-group">
+                <label for="rsa_token_id">RSA Token ID:</label>
+                <input type="text" id="rsa_token_id" name="rsa_token_id" required
+                       pattern="^[A-Za-z0-9-]+$"
+                       title="RSA Token ID can only contain letters, numbers, and hyphens">
+            </div>
+            
+            <div class="form-group">
+                <label for="home_location">Home Location:</label>
+                <select id="home_location" name="home_location" required>
+                    <option value="">Select Location</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                    <option value="E">E</option>
+                </select>
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" class="submit-button">Unlock Account</button>
+                <a href="/" class="back-button">Back to Home</a>
+            </div>
+        </form>
         
-        <div class="form-group">
-            <label>Security Question 1:</label>
-            <select name="question_1" required>
-                <option value="">Select a question...</option>
-                {% for question in security_questions %}
-                <option value="{{ question }}">{{ question }}</option>
-                {% endfor %}
-            </select>
-            <label>Answer 1: <input type="text" name="answer_1" required></label>
+        {% if msg %}
+        <div class="message {% if 'successfully' in msg %}success{% else %}error{% endif %}">
+            {{ msg }}
         </div>
-        
-        <div class="form-group">
-            <label>Security Question 2:</label>
-            <select name="question_2" required>
-                <option value="">Select a question...</option>
-                {% for question in security_questions %}
-                <option value="{{ question }}">{{ question }}</option>
-                {% endfor %}
-            </select>
-            <label>Answer 2: <input type="text" name="answer_2" required></label>
-        </div>
-        
-        <div class="form-group">
-            <label>Security Question 3:</label>
-            <select name="question_3" required>
-                <option value="">Select a question...</option>
-                {% for question in security_questions %}
-                <option value="{{ question }}">{{ question }}</option>
-                {% endfor %}
-            </select>
-            <label>Answer 3: <input type="text" name="answer_3" required></label>
-        </div>
-        
-        <button type="submit">Unlock Account</button>
-    </form>
-    {% if msg %}<p>{{ msg }}</p>{% endif %}
-    <a href="/">Back to Home</a>
+        {% endif %}
+    </div>
+
+    <style>
+        .unlock-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .submit-button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .back-button {
+            background-color: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            text-decoration: none;
+            text-align: center;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .message.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .message.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+    </style>
 {% endblock %}

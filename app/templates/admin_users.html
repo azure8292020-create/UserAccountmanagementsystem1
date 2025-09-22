@@ -1,25 +1,84 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>All Users Report</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}All Users Report{% endblock %}
+{% block content %}
     <h1>All Registered Users</h1>
-    <a href="/admin/users.csv">Download CSV</a>
-    <table border="1">
-        <tr>
-            <th>ID</th><th>First Name</th><th>Last Name</th><th>AD Account ID</th><th>Approved</th>
-        </tr>
-        {% for user in users %}
-        <tr>
-            <td>{{ user.id }}</td>
-            <td>{{ user.first_name }}</td>
-            <td>{{ user.last_name }}</td>
-            <td>{{ user.ad_account_id }}</td>
-            <td>{{ user.is_approved }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    <a href="/admin/approvals">Back to Admin</a>
-</body>
-</html>
+    <a href="/admin/users.csv" class="button">Download CSV</a>
+    
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>AD Account ID</th>
+                    <th>RSA Token ID</th>
+                    <th>Home Location</th>
+                    <th>Approved</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.first_name }}</td>
+                    <td>{{ user.last_name }}</td>
+                    <td>{{ user.ad_account_id }}</td>
+                    <td>
+                        <form method="post" action="/admin/update-rsa/{{ user.id }}" class="inline-form">
+                            <input type="text" name="rsa_token_id" value="{{ user.rsa_token_id }}" required>
+                            <button type="submit" class="small-button">Update RSA</button>
+                        </form>
+                    </td>
+                    <td>{{ user.home_location }}</td>
+                    <td>{{ "Yes" if user.is_approved else "No" }}</td>
+                    <td>
+                        {% if not user.is_approved %}
+                        <form method="post" action="/admin/approve/{{ user.id }}" class="inline-form">
+                            <button type="submit" class="small-button">Approve</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="back-link">
+        <a href="/admin/approvals" class="button">Back to Admin</a>
+    </div>
+
+    <style>
+        .table-responsive {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+        .table th, .table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+        .table thead th {
+            background-color: #f8f9fa;
+        }
+        .inline-form {
+            display: inline-block;
+            margin: 0;
+        }
+        .small-button {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            margin-left: 5px;
+        }
+        input[type="text"] {
+            padding: 4px;
+            width: 120px;
+        }
+    </style>
+{% endblock %}

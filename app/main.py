@@ -42,6 +42,25 @@ def audit_log(event: str):
     with open("audit.log", "a") as f:
         f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {event}\n")
 
+def validate_user_credentials(db: Session, rsa_token_id: str, home_location: str, ad_account_id: str = None) -> tuple[bool, str]:
+    """Validate user credentials against database records."""
+    query = db.query(User).filter(
+        User.rsa_token_id == rsa_token_id,
+        User.home_location == home_location
+    )
+    
+    if ad_account_id:
+        query = query.filter(User.ad_account_id == ad_account_id)
+    
+    user = query.first()
+    
+    if not user:
+        return False, "Invalid credentials provided"
+    if not user.is_approved:
+        return False, "User account is not approved"
+        
+    return True, "Credentials validated successfully"
+
 def hash_answer(answer: str) -> str:
     return hashlib.sha256(answer.encode()).hexdigest()
 
@@ -320,23 +339,29 @@ async def unlock_post(
     rsa_token_id: str = Form(...),
     home_location: str = Form(...),
     ad_account_id: str = Form(...),
-    question_1: str = Form(...),
-    answer_1: str = Form(...),
-    question_2: str = Form(...),
-    answer_2: str = Form(...),
-    question_3: str = Form(...),
-    answer_3: str = Form(...),
     db: Session = Depends(get_db)
 ):
     try:
+        # Validate user exists and credentials match
         user = db.query(User).filter(
             User.ad_account_id == ad_account_id,
             User.rsa_token_id == rsa_token_id,
             User.home_location == home_location,
-            User.question_1 == question_1, User.answer_1 == hash_answer(answer_1),
-            User.question_2 == question_2, User.answer_2 == hash_answer(answer_2),
-            User.question_3 == question_3, User.answer_3 == hash_answer(answer_3)
+            User.is_approved == True
         ).first()
+
+        if not user:
+            return templates.TemplateResponse("unlock.html", {
+                "request": request,
+                "msg": "Invalid credentials. Please check your AD username, RSA token ID, and location."
+            })
+
+        # Verify user exists in AD
+        if not check_user_in_ad(ad_account_id):
+            return templates.TemplateResponse("unlock.html", {
+                "request": request,
+                "msg": "User not found in Active Directory."
+            })
         if user:
             if not check_user_in_ad(ad_account_id):
                 return templates.TemplateResponse("unlock.html", {
@@ -389,12 +414,117 @@ def approve_user(user_id: int, db: Session = Depends(get_db), auth: bool = Depen
         audit_log(f"Admin approved user: {user_id}")
     return RedirectResponse(url="/admin/approvals", status_code=status.HTTP_303_SEE_OTHER)
 
+@app.post("/admin/update-rsa/{user_id}")
+async def update_rsa(
+    user_id: int, 
+    rsa_token_id: str = Form(...),
+    db: Session = Depends(get_db), 
+    auth: bool = Depends(verify_admin)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    old_rsa = user.rsa_token_id
+    user.rsa_token_id = rsa_token_id
+    db.commit()
+    
+    audit_log(f"Admin updated RSA token for user {user_id} from {old_rsa} to {rsa_token_id}")
+    logging.info(f"RSA token updated for user: {user_id}")
+    
+    return RedirectResponse(url="/admin/users", status_code=status.HTTP_303_SEE_OTHER)
+
 @app.get("/status", response_class=HTMLResponse)
 def status_get(request: Request):
     return templates.TemplateResponse("status.html", {
         "request": request,
         "security_questions": SECURITY_QUESTIONS
     })
+
+@app.get("/reset-password", response_class=HTMLResponse)
+def reset_password_get(request: Request):
+    return templates.TemplateResponse("reset_password.html", {
+        "request": request,
+        "security_questions": SECURITY_QUESTIONS
+    })
+
+@app.post("/reset-password", response_class=HTMLResponse)
+async def reset_password_post(
+    request: Request,
+    rsa_token_id: str = Form(...),
+    home_location: str = Form(...),
+    ad_account_id: str = Form(...),
+    question_1: str = Form(...),
+    answer_1: str = Form(...),
+    question_2: str = Form(...),
+    answer_2: str = Form(...),
+    question_3: str = Form(...),
+    answer_3: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Validate user exists and credentials match
+        user = db.query(User).filter(
+            User.ad_account_id == ad_account_id,
+            User.rsa_token_id == rsa_token_id,
+            User.home_location == home_location,
+            User.is_approved == True,
+            User.question_1 == question_1,
+            User.answer_1 == hash_answer(answer_1),
+            User.question_2 == question_2,
+            User.answer_2 == hash_answer(answer_2),
+            User.question_3 == question_3,
+            User.answer_3 == hash_answer(answer_3)
+        ).first()
+
+        if not user:
+            return templates.TemplateResponse("reset_password.html", {
+                "request": request,
+                "msg": "Invalid credentials or security answers.",
+                "security_questions": SECURITY_QUESTIONS
+            })
+
+        # Verify user exists in AD
+        if not check_user_in_ad(ad_account_id):
+            return templates.TemplateResponse("reset_password.html", {
+                "request": request,
+                "msg": "User not found in Active Directory.",
+                "security_questions": SECURITY_QUESTIONS
+            })
+
+        # Generate new complex password
+        from .password_utils import generate_complex_password
+        new_password = generate_complex_password()
+
+        # Reset password in AD
+        from .ad_utils import reset_ad_password
+        success, message = reset_ad_password(ad_account_id, new_password)
+
+        if not success:
+            return templates.TemplateResponse("reset_password.html", {
+                "request": request,
+                "msg": f"Failed to reset password: {message}",
+                "security_questions": SECURITY_QUESTIONS
+            })
+
+        # Log the password reset
+        logging.info(f"Password reset successful for user: {ad_account_id}")
+        audit_log(f"Password reset for AD account: {ad_account_id}")
+
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request,
+            "msg": "Password reset successfully. Please use the new password below to log in.",
+            "new_password": new_password,
+            "security_questions": SECURITY_QUESTIONS
+        })
+
+    except Exception as e:
+        logging.error(f"Password reset error: {str(e)}")
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request,
+            "msg": "An error occurred during password reset. Please try again.",
+            "security_questions": SECURITY_QUESTIONS
+        })
 
 @app.post("/status", response_class=HTMLResponse)
 async def status_post(

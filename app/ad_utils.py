@@ -95,3 +95,33 @@ def find_user_in_ad(ad_account_id: str) -> bool:
         except Exception:
             continue
     return False
+
+def reset_ad_password(ad_account_id: str, new_password: str) -> Tuple[bool, str]:
+    """Reset user's password and set change password at next logon."""
+    conn, error = get_available_ad_connection()
+    if not conn:
+        return False, f"Could not connect to any AD server: {error}"
+
+    try:
+        # Search for the user DN
+        search_base = settings.ad_ou
+        search_filter = f"(sAMAccountName={ad_account_id})"
+        conn.search(search_base, search_filter, attributes=["distinguishedName"])
+        
+        if not conn.entries:
+            return False, f"Account '{ad_account_id}' not found in AD."
+        
+        user_dn = conn.entries[0].distinguishedName.value
+        
+        # Reset password
+        conn.extend.microsoft.modify_password(user_dn, new_password)
+        
+        # Set "Change password at next logon"
+        conn.modify(user_dn,
+            {'pwdLastSet': [('MODIFY_REPLACE', [0])]})
+        
+        return True, "Password reset successfully"
+    except Exception as e:
+        return False, f"Failed to reset password: {str(e)}"
+    finally:
+        conn.unbind()
