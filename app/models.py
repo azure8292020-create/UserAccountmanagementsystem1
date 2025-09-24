@@ -30,8 +30,10 @@ class RegistrationCode(Base):
     __tablename__ = "registration_codes"
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String, unique=True, index=True, nullable=False, default=lambda: secrets.token_urlsafe(16))
-    ad_account_id = Column(String, nullable=True)
+    ad_account_id = Column(String, nullable=False)  # Now required
     used = Column(Boolean, default=False)
     used_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     used_at = Column(DateTime, nullable=True)
+    created_by = Column(String, nullable=False)  # Store admin username who generated the code
+    notes = Column(String, nullable=True)  # Optional notes about the code generation

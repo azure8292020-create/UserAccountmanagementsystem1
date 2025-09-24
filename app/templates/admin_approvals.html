@@ -1,30 +1,245 @@
 {% extends "base.html" %}
 {% block title %}Admin Approvals{% endblock %}
 {% block content %}
-    <h1>Pending User Approvals</h1>
-    <h2>Generate Registration Code</h2>
-    <form method="post" action="/admin/generate-code">
-        <label>AD Account ID (optional, tie code to AD account): <input type="text" name="ad_account_id"></label>
-        <button type="submit">Generate Code</button>
-    </form>
-    {% if msg %}<p><b>{{ msg }}</b></p>{% endif %}
-    <table border="1">
-        <tr>
-            <th>ID</th><th>First Name</th><th>Last Name</th><th>AD Account ID</th><th>Approve</th>
-        </tr>
-        {% for user in users %}
-        <tr>
-            <td>{{ user.id }}</td>
-            <td>{{ user.first_name }}</td>
-            <td>{{ user.last_name }}</td>
-            <td>{{ user.ad_account_id }}</td>
-            <td>
-                <form method="post" action="/admin/approve/{{ user.id }}">
-                    <button type="submit">Approve</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
-    <a href="/">Back to Home</a>
+    <div class="admin-container">
+        <h1>Admin Dashboard</h1>
+
+        <div class="admin-section code-generation">
+            <h2>Generate Registration Code</h2>
+            <div class="info-text">
+                Generate a registration code for a new user. The AD account must exist in Active Directory.
+            </div>
+            
+            <form method="post" action="/admin/generate-code" class="code-generation-form" onsubmit="return validateForm()">
+                <div class="form-group">
+                    <label for="ad_account_id">AD Account ID:</label>
+                    <input type="text" id="ad_account_id" name="ad_account_id" required
+                           pattern="^[A-Za-z0-9._-]+$"
+                           title="AD Account ID can only contain letters, numbers, dots, underscores, and hyphens">
+                    <div class="input-help">Enter the user's Active Directory account ID</div>
+                </div>
+                <button type="submit" class="submit-button">Generate Code</button>
+            </form>
+
+            {% if msg %}
+            <div class="message {{ msg_type if msg_type else 'info' }}">
+                {{ msg }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="admin-section pending-approvals">
+            <h2>Pending User Approvals</h2>
+            {% if users %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>AD Account ID</th>
+                            <th>Registration Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.first_name }}</td>
+                            <td>{{ user.last_name }}</td>
+                            <td>{{ user.ad_account_id if user.ad_account_id else "N/A" }}</td>
+                            <td>{{ user.created_at.strftime("%Y-%m-%d %H:%M:%S") if user.created_at else "N/A" }}</td>
+                            <td>
+                                <form method="post" action="/admin/approve/{{ user.id }}" class="inline-form">
+                                    <button type="submit" class="approve-button">Approve</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="info-text">No pending approvals</div>
+            {% endif %}
+        </div>
+
+        <div class="navigation-links">
+            <a href="/" class="button">Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        function validateForm() {
+            const adAccountId = document.getElementById('ad_account_id').value;
+            if (!adAccountId) {
+                alert('Please enter an AD Account ID');
+                return false;
+            }
+            
+            const pattern = /^[A-Za-z0-9._-]+$/;
+            if (!pattern.test(adAccountId)) {
+                alert('AD Account ID can only contain letters, numbers, dots, underscores, and hyphens');
+                return false;
+            }
+            
+            return true;
+        }
+    </script>
+
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .admin-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .info-text {
+            color: #666;
+            margin-bottom: 1rem;
+            font-style: italic;
+        }
+
+        .code-generation-form {
+            max-width: 500px;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .input-help {
+            color: #666;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .message.warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+        }
+
+        .message.info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .submit-button,
+        .approve-button,
+        .button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .submit-button {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .submit-button:hover {
+            background-color: #0056b3;
+        }
+
+        .approve-button {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .approve-button:hover {
+            background-color: #218838;
+        }
+
+        .button {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .button:hover {
+            background-color: #5a6268;
+        }
+
+        .inline-form {
+            display: inline-block;
+        }
+
+        .navigation-links {
+            margin-top: 2rem;
+            text-align: center;
+        }
+    </style>
 {% endblock %}

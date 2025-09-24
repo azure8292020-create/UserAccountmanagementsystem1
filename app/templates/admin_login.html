@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Admin Login{% endblock %}
+
+{% block content %}
+<h1>Admin Login</h1>
+
+<div class="login-container">
+    <p class="note">This page is restricted to:</p>
+    <ul>
+        <li>Default admin account</li>
+        <li>Users in the following Organizational Units:
+            <ul>
+                {% for ou in admin_ous %}
+                <li>{{ ou }}</li>
+                {% endfor %}
+            </ul>
+        </li>
+        <li>Users in the following AD Groups:
+            <ul>
+                {% for group in admin_groups %}
+                <li>{{ group }}</li>
+                {% endfor %}
+            </ul>
+        </li>
+    </ul>
+
+    <!-- Authentication will be handled by the browser's built-in Basic Auth dialog -->
+    <div class="info-box">
+        <h3>Login Instructions</h3>
+        <p>You can login using either:</p>
+        <ul>
+            <li>The default admin credentials, or</li>
+            <li>Your Active Directory credentials (if you belong to the authorized OUs or groups)</li>
+        </ul>
+    </div>
+
+    <div class="back-link">
+        <a href="/" class="button">Back to Home</a>
+    </div>
+</div>
+
+<style>
+    .login-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    .note {
+        color: #666;
+        font-style: italic;
+        margin-bottom: 15px;
+    }
+    .info-box {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin: 20px 0;
+    }
+    .info-box h3 {
+        margin-top: 0;
+        color: #333;
+    }
+    .back-link {
+        margin-top: 20px;
+        text-align: center;
+    }
+    .button {
+        display: inline-block;
+        padding: 8px 16px;
+        text-decoration: none;
+        background-color: #6c757d;
+        color: white;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}

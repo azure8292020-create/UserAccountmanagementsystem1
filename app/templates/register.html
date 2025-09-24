@@ -2,74 +2,320 @@
 {% block title %}Register User{% endblock %}
 {% block content %}
     <h1>Register User</h1>
-    <form method="post" class="registration-form" novalidate>
-        {{ csrf_token }}
-        <div class="form-group">
-            <label for="code">Registration Code:</label>
-            <input type="text" id="code" name="code" value="{{ code }}" pattern="^[A-Za-z0-9-]+$" 
-                   title="Registration code can only contain letters, numbers, and hyphens" required>
-        </div>
-        <div class="form-group">
-            <label for="first_name">First Name:</label>
-            <input type="text" id="first_name" name="first_name" pattern="^[A-Za-z\s-]+$" 
-                   title="First name can only contain letters, spaces, and hyphens" required>
-        </div>
-        <div class="form-group">
-            <label for="last_name">Last Name:</label>
-            <input type="text" id="last_name" name="last_name" pattern="^[A-Za-z\s-]+$" 
-                   title="Last name can only contain letters, spaces, and hyphens" required>
-        </div>
-        <div class="form-group">
-            <label for="middle_name">Middle Name:</label>
-            <input type="text" id="middle_name" name="middle_name" pattern="^[A-Za-z\s-]*$" 
-                   title="Middle name can only contain letters, spaces, and hyphens">
-        </div>
-        <div class="form-group">
-            <label for="has_ad">
-                <input type="checkbox" id="has_ad" name="has_ad" onchange="toggleAdField()">
-                Do you have an Active Directory Account?
-            </label>
-        </div>
-        <div class="form-group" id="ad_account_group" style="display: none;">
-            <label for="ad_account_id">Account ID (AD):</label>
-            <input type="text" id="ad_account_id" name="ad_account_id" pattern="^[A-Za-z0-9._-]+$"
-                   title="AD Account ID can only contain letters, numbers, dots, underscores, and hyphens">
-        </div>
-        <div class="form-group">
-            <label for="rsa_token_id">RSA Token ID:</label>
-            <input type="text" id="rsa_token_id" name="rsa_token_id" pattern="^[A-Za-z0-9-]+$"
-                   title="RSA Token ID can only contain letters, numbers, and hyphens" required>
-        </div>
-        <div class="form-group">
-            <label for="home_location">Home Location:</label>
-            <select id="home_location" name="home_location" required class="form-control">
-                <option value="">Select Location</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-                <option value="D">D</option>
-                <option value="E">E</option>
-            </select>
-        </div>
+    <div class="registration-container">
+        <!-- Step 1: Initial Questions -->
+        <form id="precheck-form" method="post" class="registration-form {% if not show_precheck %}hidden{% endif %}" novalidate>
+            <input type="hidden" name="form_type" value="precheck">
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="has_ad" name="has_ad" required>
+                    I have an Active Directory Account
+                </label>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="has_code" name="has_code" required>
+                    I have a Registration Code
+                </label>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="has_rsa" name="has_rsa" required>
+                    I have an RSA Token ID
+                </label>
+            </div>
+            <button type="submit" class="submit-button">Continue</button>
+        </form>
 
-        {% for i in range(1, 4) %}
-        <div class="form-group security-question">
-            <label for="question_{{ i }}">Security Question {{ i }}:</label>
-            <select id="question_{{ i }}" name="question_{{ i }}" required onchange="validateQuestions()">
-                <option value="">Select a question...</option>
-                {% for question in security_questions %}
-                <option value="{{ question }}">{{ question }}</option>
+        <!-- Step 2: Main Registration Form -->
+        <form id="registration-form" method="post" class="registration-form {% if show_precheck %}hidden{% endif %}" novalidate>
+            <input type="hidden" name="form_type" value="register">
+            
+            <!-- AD Account Section -->
+            <div class="form-section">
+                <h3>Active Directory Information</h3>
+                <div class="form-group">
+                    <label for="ad_account_id">AD Username:</label>
+                    <input type="text" id="ad_account_id" name="ad_account_id" 
+                           pattern="^[A-Za-z0-9._-]+$"
+                           title="AD Account ID can only contain letters, numbers, dots, underscores, and hyphens"
+                           required
+                           {% if ad_info %}value="{{ ad_info.username }}"{% endif %}>
+                    <button type="button" onclick="fetchADInfo()" class="secondary-button">Fetch AD Info</button>
+                </div>
+                
+                <div class="form-group">
+                    <label for="first_name">First Name:</label>
+                    <input type="text" id="first_name" name="first_name" 
+                           {% if ad_info %}value="{{ ad_info.first_name }}" readonly{% endif %}
+                           required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="last_name">Last Name:</label>
+                    <input type="text" id="last_name" name="last_name" 
+                           {% if ad_info %}value="{{ ad_info.last_name }}" readonly{% endif %}
+                           required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="middle_name">Middle Name:</label>
+                    <input type="text" id="middle_name" name="middle_name" 
+                           {% if ad_info %}value="{{ ad_info.middle_name }}" readonly{% endif %}>
+                </div>
+            </div>
+            <!-- Registration Code Section -->
+            <div class="form-section">
+                <h3>Registration Code</h3>
+                <div class="form-group">
+                    <label for="code">Registration Code:</label>
+                    <input type="text" id="code" name="code" value="{{ code }}" 
+                           pattern="^[A-Za-z0-9-]+$" 
+                           title="Registration code can only contain letters, numbers, and hyphens" 
+                           required>
+                </div>
+            </div>
+
+            <!-- RSA and Location Section -->
+            <div class="form-section">
+                <h3>Additional Information</h3>
+                <div class="form-group">
+                    <label for="rsa_token_id">RSA Token ID:</label>
+                    <input type="text" id="rsa_token_id" name="rsa_token_id" 
+                           pattern="^[A-Za-z0-9-]+$"
+                           title="RSA Token ID can only contain letters, numbers, and hyphens" 
+                           required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="home_location">Home Location:</label>
+                    <select id="home_location" name="home_location" required class="form-control">
+                        <option value="">Select Location</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                        <option value="E">E</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Security Questions Section -->
+            <div class="form-section">
+                <h3>Security Questions</h3>
+                <p class="note">Note: Answers are not case-sensitive</p>
+                {% for i in range(1, 4) %}
+                <div class="form-group security-question">
+                    <label for="question_{{ i }}">Security Question {{ i }}:</label>
+                    <select id="question_{{ i }}" name="question_{{ i }}" required onchange="validateQuestions()">
+                        <option value="">Select a question...</option>
+                        {% for question in security_questions %}
+                        <option value="{{ question }}">{{ question }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="answer_{{ i }}">Answer {{ i }}:</label>
+                    <input type="text" id="answer_{{ i }}" name="answer_{{ i }}" required 
+                           minlength="2" maxlength="100"
+                           onchange="this.value = this.value.toLowerCase()">
+                </div>
                 {% endfor %}
-            </select><br>
-            <label for="answer_{{ i }}">Answer {{ i }}:</label>
-            <input type="text" id="answer_{{ i }}" name="answer_{{ i }}" required 
-                   minlength="2" maxlength="100">
-        </div>
-        {% endfor %}
+            </div>
 
-        <div id="error-message" class="error-message" style="display: none;"></div>
-        <button type="submit" class="submit-button">Register</button>
-    </form>
+            <div id="error-message" class="error-message" style="display: none;"></div>
+            <button type="submit" class="submit-button">Register</button>
+        </form>
+
+        {% if msg %}
+        <div class="message {% if 'contact' in msg %}error{% else %}success{% endif %}">
+            {{ msg }}
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        async function checkExistingUser(field, value) {
+            try {
+                const response = await fetch(`/api/check-existing-user?${field}=${encodeURIComponent(value)}`);
+                const data = await response.json();
+                
+                if (!data.success || data.exists) {
+                    const errorDiv = document.getElementById('error-message');
+                    errorDiv.textContent = data.message;
+                    errorDiv.style.display = 'block';
+                    document.querySelector('button[type="submit"]').disabled = true;
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                console.error('Error checking user:', error);
+                return true; // Allow form submission if check fails
+            }
+        }
+
+        function validateQuestions() {
+            const selects = document.querySelectorAll('.security-question select');
+            const answers = document.querySelectorAll('.security-question input[type="text"]');
+            const errorDiv = document.getElementById('error-message');
+            const submitBtn = document.querySelector('button[type="submit"]');
+            const selected = new Set();
+            let hasError = false;
+            let errorMessage = '';
+
+            // Validate unique questions
+            selects.forEach(select => {
+                if (select.value && selected.has(select.value)) {
+                    hasError = true;
+                    errorMessage = 'Please select different security questions';
+                }
+                if (select.value) {
+                    selected.add(select.value);
+                }
+            });
+
+            // Validate answer lengths and format
+            answers.forEach((answer, index) => {
+                if (answer.value.length > 0) {
+                    if (answer.value.length < 2) {
+                        hasError = true;
+                        errorMessage = 'Security answers must be at least 2 characters long';
+                    }
+                    answer.value = answer.value.toLowerCase();
+
+                    // Check for special characters
+                    const specialCharsRegex = /[^a-z0-9\s]/;
+                    if (specialCharsRegex.test(answer.value)) {
+                        hasError = true;
+                        errorMessage = 'Security answers can only contain letters, numbers, and spaces';
+                    }
+                }
+            });
+
+            if (hasError) {
+                errorDiv.textContent = errorMessage;
+                errorDiv.style.display = 'block';
+                submitBtn.disabled = true;
+            } else {
+                errorDiv.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        }
+
+        async function fetchADInfo() {
+            const username = document.getElementById('ad_account_id').value;
+            if (!username) {
+                alert('Please enter AD username first');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/ad-info/' + username);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('first_name').value = data.first_name;
+                    document.getElementById('last_name').value = data.last_name;
+                    document.getElementById('middle_name').value = data.middle_name || '';
+                    
+                    // Make name fields readonly
+                    document.getElementById('first_name').readOnly = true;
+                    document.getElementById('last_name').readOnly = true;
+                    document.getElementById('middle_name').readOnly = true;
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                alert('Error fetching AD information. Please try again.');
+            }
+        }
+
+        // Initialize form state
+        document.addEventListener('DOMContentLoaded', function() {
+            validateQuestions();
+            
+            // Add event listeners for security question answers
+            document.querySelectorAll('[id^="answer_"]').forEach(input => {
+                input.addEventListener('input', function(e) {
+                    // Convert to lowercase and remove special characters
+                    this.value = this.value.toLowerCase();
+                    validateQuestions();
+                });
+
+                input.addEventListener('blur', function() {
+                    // Trim whitespace on blur
+                    this.value = this.value.trim();
+                    validateQuestions();
+                });
+            });
+
+            // Add event listener for AD account check
+            document.getElementById('ad_account_id').addEventListener('blur', async function() {
+                if (this.value) {
+                    await checkExistingUser('ad_account_id', this.value);
+                }
+            });
+
+            // Add event listener for RSA token check
+            document.getElementById('rsa_token_id').addEventListener('blur', async function() {
+                if (this.value) {
+                    await checkExistingUser('rsa_token_id', this.value);
+                }
+            });
+        });
+    </script>
+
+    <style>
+        .registration-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        .form-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #4f8cff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        .note {
+            color: #666;
+            font-style: italic;
+            margin-bottom: 15px;
+        }
+        .secondary-button {
+            background-color: #6c757d;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .message {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .message.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .message.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+    </style>
+{% endblock %}
 
     {% if msg %}
     <div class="message {% if 'error' in msg|lower %}error{% else %}success{% endif %}">

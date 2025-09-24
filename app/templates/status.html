@@ -1,62 +1,236 @@
 {% extends "base.html" %}
-{% block title %}Account Status{% endblock %}
+{% block title %}Check Account Status{% endblock %}
 {% block content %}
-    <h1>Account Status</h1>
-    <form method="post" onsubmit="return validateQuestions()">
-        <div class="form-group">
-            <label>Account ID: <input type="text" name="ad_account_id" required></label>
+    <div class="status-container">
+        <h1>Check Account Status</h1>
+
+        <div class="form-section">
+            <div class="form-group">
+                <label for="username">AD Username:</label>
+                <input type="text" id="username" name="username" required>
+                <button onclick="checkStatus()" class="button">Check Status</button>
+            </div>
         </div>
-        <div class="form-group">
-            <label>RSA Token ID: <input type="text" name="rsa_token_id" required></label>
+
+        <div id="status-result" class="status-result hidden">
+            <h2>Account Status</h2>
+            <div id="status-details"></div>
+            
+            <div class="action-buttons hidden" id="action-buttons">
+                <button onclick="unlockAccount()" id="unlock-button" class="button action-button">Unlock Account</button>
+                <button onclick="resetPassword()" id="reset-button" class="button action-button">Reset Password</button>
+            </div>
         </div>
-        <div class="form-group">
-            <label>Home Location: 
-                <select name="home_location" required>
-                    <option value="">Select Location</option>
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="D">D</option>
-                    <option value="E">E</option>
-                </select>
-            </label>
+
+        {% if msg %}
+        <div class="message {% if 'error' in msg|lower %}error{% else %}success{% endif %}">
+            {{ msg }}
         </div>
-        
-        <div class="form-group">
-            <label>Security Question 1:</label>
-            <select name="question_1" required>
-                <option value="">Select a question...</option>
-                {% for question in security_questions %}
-                <option value="{{ question }}">{{ question }}</option>
-                {% endfor %}
-            </select>
-            <label>Answer 1: <input type="text" name="answer_1" required></label>
+        {% endif %}
+
+        <div class="navigation-links">
+            <a href="/" class="button">Back to Home</a>
         </div>
-        
-        <div class="form-group">
-            <label>Security Question 2:</label>
-            <select name="question_2" required>
-                <option value="">Select a question...</option>
-                {% for question in security_questions %}
-                <option value="{{ question }}">{{ question }}</option>
-                {% endfor %}
-            </select>
-            <label>Answer 2: <input type="text" name="answer_2" required></label>
-        </div>
-        
-        <div class="form-group">
-            <label>Security Question 3:</label>
-            <select name="question_3" required>
-                <option value="">Select a question...</option>
-                {% for question in security_questions %}
-                <option value="{{ question }}">{{ question }}</option>
-                {% endfor %}
-            </select>
-            <label>Answer 3: <input type="text" name="answer_3" required></label>
-        </div>
-        
-        <button type="submit">Check Status</button>
-    </form>
-    {% if msg %}<p>{{ msg }}</p>{% endif %}
-    <a href="/">Back to Home</a>
+    </div>
+
+    <script>
+        async function checkStatus() {
+            const username = document.getElementById('username').value;
+            if (!username) {
+                alert('Please enter a username');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/check-status?username=${encodeURIComponent(username)}`);
+                const data = await response.json();
+
+                const statusResult = document.getElementById('status-result');
+                const statusDetails = document.getElementById('status-details');
+                const actionButtons = document.getElementById('action-buttons');
+                const unlockButton = document.getElementById('unlock-button');
+                const resetButton = document.getElementById('reset-button');
+
+                statusResult.classList.remove('hidden');
+
+                if (data.success) {
+                    const status = data.status;
+                    let statusHtml = '<div class="status-grid">';
+                    statusHtml += `<div class="status-item ${status.is_locked ? 'error' : 'success'}">
+                        <div class="status-label">Account Lock Status:</div>
+                        <div class="status-value">${status.is_locked ? 'Locked' : 'Not Locked'}</div>
+                    </div>`;
+                    statusHtml += `<div class="status-item ${status.is_disabled ? 'error' : 'success'}">
+                        <div class="status-label">Account Status:</div>
+                        <div class="status-value">${status.is_disabled ? 'Disabled' : 'Enabled'}</div>
+                    </div>`;
+                    statusHtml += `<div class="status-item ${status.is_expired ? 'error' : 'success'}">
+                        <div class="status-label">Account Expiration:</div>
+                        <div class="status-value">${status.is_expired ? 'Expired' : 'Active'}</div>
+                    </div>`;
+                    statusHtml += '</div>';
+                    statusDetails.innerHTML = statusHtml;
+
+                    // Show action buttons if account is locked
+                    if (status.is_locked) {
+                        actionButtons.classList.remove('hidden');
+                        unlockButton.classList.remove('hidden');
+                    } else {
+                        actionButtons.classList.add('hidden');
+                    }
+
+                    // Always show reset password button
+                    resetButton.classList.remove('hidden');
+                } else {
+                    statusDetails.innerHTML = `<div class="error-message">${data.error}</div>`;
+                    actionButtons.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('status-details').innerHTML = 
+                    '<div class="error-message">Error checking account status. Please try again.</div>';
+            }
+        }
+
+        async function unlockAccount() {
+            const username = document.getElementById('username').value;
+            window.location.href = `/unlock?username=${encodeURIComponent(username)}`;
+        }
+
+        async function resetPassword() {
+            const username = document.getElementById('username').value;
+            window.location.href = `/reset-password?username=${encodeURIComponent(username)}`;
+        }
+    </script>
+
+    <style>
+        .status-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+
+        .form-section {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .status-result {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .status-grid {
+            display: grid;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .status-item {
+            padding: 1rem;
+            border-radius: 4px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: center;
+        }
+
+        .status-item.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-item.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-label {
+            font-weight: bold;
+        }
+
+        .action-buttons {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .action-button {
+            font-size: 1rem;
+            padding: 0.75rem 1.5rem;
+        }
+
+        .navigation-links {
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error-message {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+    </style>
 {% endblock %}

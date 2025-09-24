@@ -1,21 +1,288 @@
 {% extends "base.html" %}
-{% block title %}Create User Account (Manual Approval){% endblock %}
+{% block title %}Create New User Account{% endblock %}
 {% block content %}
-    <h1>Create User Account (Manual Approval)</h1>
-    <form method="post">
-        <label>First Name: <input type="text" name="first_name" required></label><br>
-        <label>Last Name: <input type="text" name="last_name" required></label><br>
-        <label>Middle Name: <input type="text" name="middle_name"></label><br>
-        <label>RSA Token ID: <input type="text" name="rsa_token_id" required></label><br>
-        <label>Home Location: <input type="text" name="home_location" required></label><br>
-        <label>Question 1: <input type="text" name="question_1" required></label><br>
-        <label>Answer 1: <input type="text" name="answer_1" required></label><br>
-        <label>Question 2: <input type="text" name="question_2" required></label><br>
-        <label>Answer 2: <input type="text" name="answer_2" required></label><br>
-        <label>Question 3: <input type="text" name="question_3" required></label><br>
-        <label>Answer 3: <input type="text" name="answer_3" required></label><br>
-        <button type="submit">Submit for Approval</button>
-    </form>
-    {% if msg %}<p>{{ msg }}</p>{% endif %}
-    <a href="/">Back to Home</a>
+    <div class="create-user-container">
+        <h1>Create New User Account</h1>
+        <p class="info-text">This form is for creating new user accounts for users who do not have Active Directory accounts.</p>
+
+        <form method="post" class="create-user-form" onsubmit="return validateForm()">
+            <div class="form-section">
+                <h3>Personal Information</h3>
+                <div class="form-group">
+                    <label for="first_name">First Name:</label>
+                    <input type="text" id="first_name" name="first_name" required 
+                           pattern="^[A-Za-z\s-]+$" 
+                           title="First name can only contain letters, spaces, and hyphens">
+                </div>
+
+                <div class="form-group">
+                    <label for="last_name">Last Name:</label>
+                    <input type="text" id="last_name" name="last_name" required
+                           pattern="^[A-Za-z\s-]+$"
+                           title="Last name can only contain letters, spaces, and hyphens">
+                </div>
+
+                <div class="form-group">
+                    <label for="middle_name">Middle Name: (Optional)</label>
+                    <input type="text" id="middle_name" name="middle_name"
+                           pattern="^[A-Za-z\s-]*$"
+                           title="Middle name can only contain letters, spaces, and hyphens">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Access Information</h3>
+                <div class="form-group">
+                    <label for="rsa_token_id">RSA Token ID:</label>
+                    <input type="text" id="rsa_token_id" name="rsa_token_id" required
+                           pattern="^[A-Za-z0-9-]+$"
+                           title="RSA Token ID can only contain letters, numbers, and hyphens">
+                </div>
+
+                <div class="form-group">
+                    <label for="home_location">Home Location:</label>
+                    <select id="home_location" name="home_location" required class="form-control">
+                        <option value="">Select Location</option>
+                        <option value="A">Location A</option>
+                        <option value="B">Location B</option>
+                        <option value="C">Location C</option>
+                        <option value="D">Location D</option>
+                        <option value="E">Location E</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Security Questions</h3>
+                <p class="note">Note: Answers are not case-sensitive</p>
+                
+                {% for i in range(1, 4) %}
+                <div class="form-group security-question">
+                    <label for="question_{{ i }}">Security Question {{ i }}:</label>
+                    <select id="question_{{ i }}" name="question_{{ i }}" required onchange="validateQuestions()">
+                        <option value="">Select a question...</option>
+                        <option value="What was your childhood nickname?">What was your childhood nickname?</option>
+                        <option value="What is the name of your first pet?">What is the name of your first pet?</option>
+                        <option value="What was your first car?">What was your first car?</option>
+                        <option value="What elementary school did you attend?">What elementary school did you attend?</option>
+                        <option value="What is the name of the town where you were born?">What is the name of the town where you were born?</option>
+                        <option value="What was your grandmother's maiden name?">What was your grandmother's maiden name?</option>
+                        <option value="What is your mother's middle name?">What is your mother's middle name?</option>
+                        <option value="What is your favorite book?">What is your favorite book?</option>
+                    </select>
+                    
+                    <label for="answer_{{ i }}">Answer {{ i }}:</label>
+                    <input type="text" id="answer_{{ i }}" name="answer_{{ i }}" required
+                           minlength="2" maxlength="100"
+                           onchange="this.value = this.value.toLowerCase()"
+                           title="Answer must be at least 2 characters long">
+                </div>
+                {% endfor %}
+                
+                <div id="error-message" class="error-message" style="display: none;"></div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="submit-button">Submit for Approval</button>
+                <a href="/" class="button secondary">Cancel</a>
+            </div>
+        </form>
+
+        {% if msg %}
+        <div class="message {% if 'error' in msg|lower %}error{% else %}success{% endif %}">
+            {{ msg }}
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function validateQuestions() {
+            const selects = document.querySelectorAll('.security-question select');
+            const errorDiv = document.getElementById('error-message');
+            const submitBtn = document.querySelector('button[type="submit"]');
+            const selected = new Set();
+            let hasError = false;
+
+            // Check for duplicate questions
+            selects.forEach(select => {
+                if (select.value && selected.has(select.value)) {
+                    hasError = true;
+                }
+                if (select.value) {
+                    selected.add(select.value);
+                }
+            });
+
+            if (hasError) {
+                errorDiv.textContent = 'Please select different security questions';
+                errorDiv.style.display = 'block';
+                submitBtn.disabled = true;
+                return false;
+            }
+
+            errorDiv.style.display = 'none';
+            submitBtn.disabled = false;
+            return true;
+        }
+
+        function validateForm() {
+            // Validate security questions
+            if (!validateQuestions()) {
+                return false;
+            }
+
+            // Convert security answers to lowercase
+            document.querySelectorAll('[id^="answer_"]').forEach(input => {
+                input.value = input.value.toLowerCase().trim();
+            });
+
+            return true;
+        }
+
+        // Initialize form
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add input event listeners for security answers
+            document.querySelectorAll('[id^="answer_"]').forEach(input => {
+                input.addEventListener('input', function() {
+                    this.value = this.value.toLowerCase();
+                });
+            });
+            
+            validateQuestions();
+        });
+    </script>
+
+    <style>
+        .create-user-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+
+        .info-text {
+            color: #666;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .form-section {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #4f8cff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #4f8cff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(79,140,255,0.2);
+        }
+
+        .security-question {
+            padding: 1rem;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .note {
+            color: #666;
+            font-style: italic;
+            margin-bottom: 1rem;
+        }
+
+        .error-message {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        .submit-button,
+        .button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .submit-button {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .submit-button:hover {
+            background-color: #218838;
+        }
+
+        .button.secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .button.secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+    </style>
 {% endblock %}

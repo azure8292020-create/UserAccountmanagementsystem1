@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Registration Successful{% endblock %}
+{% block content %}
+    <div class="success-container">
+        <h1>Registration Successful!</h1>
+        
+        <div class="success-message">
+            <p>{{ msg }}</p>
+        </div>
+
+        <div class="registration-details">
+            <h2>Registration Details</h2>
+            <table>
+                <tr>
+                    <th>Registration ID:</th>
+                    <td>{{ registration_details.id }}</td>
+                </tr>
+                <tr>
+                    <th>Name:</th>
+                    <td>{{ registration_details.name }}</td>
+                </tr>
+                <tr>
+                    <th>AD Account:</th>
+                    <td>{{ registration_details.ad_account }}</td>
+                </tr>
+                <tr>
+                    <th>Timestamp:</th>
+                    <td>{{ registration_details.timestamp }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="next-steps">
+            <h3>Next Steps</h3>
+            <ul>
+                {% for step in registration_details.next_steps %}
+                <li>{{ step }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="buttons">
+            <a href="/" class="button">Return to Home</a>
+            <a href="/status" class="button">Check Status</a>
+        </div>
+    </div>
+
+    <style>
+        .success-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .registration-details {
+            margin: 2rem 0;
+        }
+
+        .registration-details table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        .registration-details th,
+        .registration-details td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #dee2e6;
+            text-align: left;
+        }
+
+        .registration-details th {
+            width: 30%;
+            color: #495057;
+            background-color: #f8f9fa;
+        }
+
+        .next-steps {
+            margin: 2rem 0;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .next-steps ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .next-steps li {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .next-steps li:before {
+            content: "✓";
+            color: #28a745;
+            position: absolute;
+            left: 0;
+        }
+
+        .buttons {
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            margin: 0 0.5rem;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+{% endblock %}
